@@ -1394,8 +1394,9 @@ spec:
                         type: string
                       groupSnapshot:
                         default: false
-                        description: GroupSnapshot makes the operator use a VolumeGroupSnapshot
-                          resource instead of individual snapshots
+                        description: |-
+                          GroupSnapshot makes the operator use a VolumeGroupSnapshot resource
+                          instead of individual snapshots
                         type: boolean
                       labels:
                         additionalProperties:
