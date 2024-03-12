@@ -135,39 +135,72 @@ func (se *Reconciler) enrichVolumeGroupSnapshot(
 		return nil
 	}
 
+	// Get the PVC references from a list if volume handles
+	pvcReferences, err := se.volumeHandlesToClaimRef(
+		ctx,
+		groupSnapshotContent.Spec.Source.VolumeHandles,
+	)
+	if err != nil {
+		return err
+	}
+
 	// // Enrich the volume snapshots
-	// for i := range groupSnapshot.Status.VolumeSnapshotRefList {
-	// 	snapshotRef := groupSnapshot.Status.VolumeSnapshotRefList[i]
-	// 	pvName := groupSnapshotContent.Spec.Source.PersistentVolumeNames[i]
+	for i := range pvcReferences {
+		snapshotRef := groupSnapshot.Status.VolumeSnapshotRefList[i]
 
-	// 	var pv corev1.PersistentVolume
-	// 	if err := se.cli.Get(
-	// 		ctx,
-	// 		client.ObjectKey{Name: pvName},
-	// 		&pv,
-	// 	); err != nil {
-	// 		return err
-	// 	}
-
-	// 	if pv.Spec.ClaimRef == nil {
-	// 		contextLogger.Info("Unbound PV claimRef for a Snapshotter PV",
-	// 			"snapshotRef", snapshotRef, "pvName", pvName)
-	// 		continue
-	// 	}
-
-	// 	if err := se.enrichVolumeGroupSnapshotMember(
-	// 		ctx,
-	// 		cluster,
-	// 		backup,
-	// 		&groupSnapshot,
-	// 		snapshotRef,
-	// 		pv.Spec.ClaimRef.Name,
-	// 	); err != nil {
-	// 		return err
-	// 	}
-	// }
+		if err := se.enrichVolumeGroupSnapshotMember(
+			ctx,
+			cluster,
+			backup,
+			&groupSnapshot,
+			snapshotRef,
+			pvcReferences[i].Name,
+		); err != nil {
+			return err
+		}
+	}
 
 	return nil
+}
+
+func (se *Reconciler) volumeHandlesToClaimRef(
+	ctx context.Context,
+	volumeHandles []string,
+) ([]corev1.ObjectReference, error) {
+	result := make([]corev1.ObjectReference, 0, len(volumeHandles))
+
+	var volumeList corev1.PersistentVolumeList
+	if err := se.cli.List(ctx, &volumeList); err != nil {
+		return result, err
+	}
+
+	handleMap := make(map[string]corev1.PersistentVolume)
+	for _, volume := range volumeList.Items {
+		if volume.Spec.CSI == nil {
+			continue
+		}
+
+		if len(volume.Spec.CSI.VolumeHandle) == 0 {
+			continue
+		}
+
+		if volume.Spec.ClaimRef == nil {
+			continue
+		}
+
+		handleMap[volume.Spec.CSI.VolumeHandle] = volume
+	}
+
+	for _, handle := range volumeHandles {
+		volume, ok := handleMap[handle]
+		if !ok {
+			return nil, fmt.Errorf("cannot find PVC for volume handle %s", handle)
+		}
+
+		result = append(result, *volume.Spec.ClaimRef)
+	}
+
+	return result, nil
 }
 
 // enrichVolumeSnapshot enriches a Volume Snapshot created by a VolumeGroupSnapshot

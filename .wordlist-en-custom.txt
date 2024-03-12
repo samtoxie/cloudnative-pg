@@ -432,6 +432,7 @@ VOLNAME
 Valerio
 ValidationError
 VirtualBox
+VolumeGroupSnapshot
 VolumeSnapshot
 VolumeSnapshotClass
 VolumeSnapshotConfiguration
@@ -734,6 +735,7 @@ googleCredentials
 goroutines
 gosec
 grafana
+groupSnapshot
 gzip
 hashicorp
 hba
