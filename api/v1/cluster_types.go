@@ -1059,6 +1059,9 @@ type PgBouncerIntegrationStatus struct {
 // ReplicaClusterConfiguration encapsulates the configuration of a replica
 // cluster
 type ReplicaClusterConfiguration struct {
+	// Primary defines which Cluster is defined to be the primary in the distributed PostgreSQL cluster, based on the
+	// topology specified in externalClusters
+	Primary string `json:"primary,omitempty"`
 	// The name of the external cluster which is the replication origin
 	// +kubebuilder:validation:MinLength=1
 	Source string `json:"source"`
@@ -1067,7 +1070,7 @@ type ReplicaClusterConfiguration struct {
 	// existing cluster. Replica cluster can be created from a recovery
 	// object store or via streaming through pg_basebackup.
 	// Refer to the Replica clusters page of the documentation for more information.
-	Enabled bool `json:"enabled"`
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // DefaultReplicationSlotsUpdateInterval is the default in seconds for the replication slots update interval
@@ -3192,7 +3195,17 @@ func (cluster Cluster) ExternalCluster(name string) (ExternalCluster, bool) {
 
 // IsReplica checks if this is a replica cluster or not
 func (cluster Cluster) IsReplica() bool {
-	return cluster.Spec.ReplicaCluster != nil && cluster.Spec.ReplicaCluster.Enabled
+	r := cluster.Spec.ReplicaCluster
+	if r == nil {
+		return false
+	}
+	if r.Primary != "" {
+		return r.Source != r.Primary
+	}
+	if r.Enabled == nil {
+		return false
+	}
+	return *r.Enabled
 }
 
 var slotNameNegativeRegex = regexp.MustCompile("[^a-z0-9_]+")

@@ -3847,13 +3847,17 @@ spec:
                       object store or via streaming through pg_basebackup.
                       Refer to the Replica clusters page of the documentation for more information.
                     type: boolean
+                  primary:
+                    description: |-
+                      Primary defines which Cluster is defined to be the primary in the distributed PostgreSQL cluster, based on the
+                      topology specified in externalClusters
+                    type: string
                   source:
                     description: The name of the external cluster which is the replication
                       origin
                     minLength: 1
                     type: string
                 required:
-                - enabled
                 - source
                 type: object
               replicationSlots:

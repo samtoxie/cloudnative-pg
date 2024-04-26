@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	k8client "sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
@@ -155,7 +156,7 @@ var _ = Describe("Replica Mode", Label(tests.LabelReplication), func() {
 			By("setting replica mode on the src cluster", func() {
 				cluster, err := env.GetCluster(namespace, clusterOneName)
 				Expect(err).ToNot(HaveOccurred())
-				cluster.Spec.ReplicaCluster.Enabled = true
+				cluster.Spec.ReplicaCluster.Enabled = ptr.To(true)
 				err = env.Client.Update(ctx, cluster)
 				Expect(err).ToNot(HaveOccurred())
 				AssertClusterIsReady(namespace, clusterOneName, testTimeouts[testUtils.ClusterIsReady], env)
@@ -172,7 +173,7 @@ var _ = Describe("Replica Mode", Label(tests.LabelReplication), func() {
 			By("disabling the replica mode on the src cluster", func() {
 				cluster, err := env.GetCluster(namespace, clusterTwoName)
 				Expect(err).ToNot(HaveOccurred())
-				cluster.Spec.ReplicaCluster.Enabled = false
+				cluster.Spec.ReplicaCluster.Enabled = ptr.To(false)
 				err = env.Client.Update(ctx, cluster)
 				Expect(err).ToNot(HaveOccurred())
 				AssertClusterIsReady(namespace, clusterOneName, testTimeouts[testUtils.ClusterIsReady], env)

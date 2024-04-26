@@ -1916,34 +1916,52 @@ func (r *Cluster) validateUnixPermissionIdentifierChange(old *Cluster) field.Err
 // Check if the replica mode is used with an incompatible bootstrap
 // method
 func (r *Cluster) validateReplicaMode() field.ErrorList {
+	replicaClusterConf := r.Spec.ReplicaCluster
+	if replicaClusterConf == nil {
+		return nil
+	}
+
+	isEnabled := replicaClusterConf.Enabled == nil || *replicaClusterConf.Enabled
+	hasPrimary := replicaClusterConf.Primary != ""
+	if !isEnabled && !hasPrimary {
+		return nil
+	}
+
 	var result field.ErrorList
-
-	if r.Spec.ReplicaCluster == nil || !r.Spec.ReplicaCluster.Enabled {
-		return result
+	if hasPrimary {
+		if isEnabled {
+			result = append(result, field.Invalid(
+				field.NewPath("spec", "replicaCluster", "enabled"),
+				replicaClusterConf,
+				"replica mode enabled is not compatible with the primary field"))
+		}
 	}
 
-	if r.Spec.Bootstrap == nil {
-		result = append(result, field.Invalid(
-			field.NewPath("spec", "bootstrap"),
-			r.Spec.ReplicaCluster,
-			"bootstrap configuration is required for replica mode"))
-	} else if r.Spec.Bootstrap.PgBaseBackup == nil && r.Spec.Bootstrap.Recovery == nil &&
-		// this is needed because we only want to validate this during cluster creation, currently if we would have
-		// to enable this logic only during creation and not cluster changes it would require a meaningful refactor
-		len(r.ObjectMeta.ResourceVersion) == 0 {
-		result = append(result, field.Invalid(
-			field.NewPath("spec", "replicaCluster"),
-			r.Spec.ReplicaCluster,
-			"replica mode bootstrap is compatible only with pg_basebackup or recovery"))
+	if isEnabled {
+		if r.Spec.Bootstrap == nil {
+			result = append(result, field.Invalid(
+				field.NewPath("spec", "bootstrap"),
+				replicaClusterConf,
+				"bootstrap configuration is required for replica mode"))
+		} else if r.Spec.Bootstrap.PgBaseBackup == nil && r.Spec.Bootstrap.Recovery == nil &&
+			// this is needed because we only want to validate this during cluster creation, currently if we would have
+			// to enable this logic only during creation and not cluster changes it would require a meaningful refactor
+			len(r.ObjectMeta.ResourceVersion) == 0 {
+			result = append(result, field.Invalid(
+				field.NewPath("spec", "replicaCluster"),
+				replicaClusterConf,
+				"replica mode bootstrap is compatible only with pg_basebackup or recovery"))
+		}
 	}
-	_, found := r.ExternalCluster(r.Spec.ReplicaCluster.Source)
+
+	_, found := r.ExternalCluster(replicaClusterConf.Source)
 	if !found {
 		result = append(
 			result,
 			field.Invalid(
 				field.NewPath("spec", "replicaCluster", "primaryServerName"),
-				r.Spec.ReplicaCluster.Source,
-				fmt.Sprintf("External cluster %v not found", r.Spec.ReplicaCluster.Source)))
+				replicaClusterConf.Source,
+				fmt.Sprintf("External cluster %v not found", replicaClusterConf.Source)))
 	}
 
 	return result

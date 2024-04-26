@@ -1198,7 +1198,7 @@ var _ = Describe("configuration change validation", func() {
 			Spec: ClusterSpec{
 				Instances: 1,
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 				},
 				PostgresConfiguration: PostgresConfiguration{
 					Parameters: map[string]string{
@@ -2599,7 +2599,7 @@ var _ = Describe("replica mode validation", func() {
 		cluster := &Cluster{
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				ExternalClusters: []ExternalCluster{
@@ -2616,7 +2616,7 @@ var _ = Describe("replica mode validation", func() {
 		cluster := &Cluster{
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2639,7 +2639,7 @@ var _ = Describe("replica mode validation", func() {
 			},
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2663,7 +2663,7 @@ var _ = Describe("replica mode validation", func() {
 			},
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2688,7 +2688,7 @@ var _ = Describe("replica mode validation", func() {
 			},
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: false,
+					Enabled: ptr.To(false),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2717,7 +2717,7 @@ var _ = Describe("replica mode validation", func() {
 		cluster := &Cluster{
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2738,7 +2738,7 @@ var _ = Describe("replica mode validation", func() {
 		cluster := &Cluster{
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
@@ -2759,7 +2759,7 @@ var _ = Describe("replica mode validation", func() {
 		cluster := &Cluster{
 			Spec: ClusterSpec{
 				ReplicaCluster: &ReplicaClusterConfiguration{
-					Enabled: true,
+					Enabled: ptr.To(true),
 					Source:  "test",
 				},
 				Bootstrap: &BootstrapConfiguration{
