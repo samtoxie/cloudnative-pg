@@ -3852,6 +3852,11 @@ spec:
                       Primary defines which Cluster is defined to be the primary in the distributed PostgreSQL cluster, based on the
                       topology specified in externalClusters
                     type: string
+                  self:
+                    description: |-
+                      Self defines the name of this cluster. It is used to determine if this is a primary
+                      or a replica cluster, comparing it with `primary`
+                    type: string
                   source:
                     description: The name of the external cluster which is the replication
                       origin
