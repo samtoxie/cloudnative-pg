@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	storagegroupsnapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/client/v7/apis/volumegroupsnapshot/v1alpha1"
-	storagesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v7/apis/volumesnapshot/v1"
+	storagegroupsnapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumegroupsnapshot/v1alpha1"
+	storagesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,7 +106,7 @@ func (se *Reconciler) enrichVolumeGroupSnapshot(
 	}
 
 	// Wait for the CSI driver to have created the independent volume snapshots
-	if len(groupSnapshot.Status.VolumeSnapshotRefList) == 0 {
+	if len(groupSnapshot.Status.PVCVolumeSnapshotRefList) == 0 {
 		return nil
 	}
 
@@ -116,45 +116,14 @@ func (se *Reconciler) enrichVolumeGroupSnapshot(
 		return nil
 	}
 
-	// Get the bound snapshot content
-	var groupSnapshotContent storagegroupsnapshotv1alpha1.VolumeGroupSnapshotContent
-	if err := se.cli.Get(
-		ctx,
-		client.ObjectKey{Name: *groupSnapshot.Status.BoundVolumeGroupSnapshotContentName},
-		&groupSnapshotContent,
-	); err != nil {
-		if apierrs.IsNotFound(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	// Wait for the volume group snapshot controller to bind all the volumes
-	if len(groupSnapshotContent.Spec.Source.VolumeHandles) != len(groupSnapshot.Status.VolumeSnapshotRefList) {
-		return nil
-	}
-
-	// Get the PVC references from a list if volume handles
-	pvcReferences, err := se.volumeHandlesToClaimRef(
-		ctx,
-		groupSnapshotContent.Spec.Source.VolumeHandles,
-	)
-	if err != nil {
-		return err
-	}
-
 	// // Enrich the volume snapshots
-	for i := range pvcReferences {
-		snapshotRef := groupSnapshot.Status.VolumeSnapshotRefList[i]
-
+	for i := range groupSnapshot.Status.PVCVolumeSnapshotRefList {
 		if err := se.enrichVolumeGroupSnapshotMember(
 			ctx,
 			cluster,
 			backup,
 			&groupSnapshot,
-			snapshotRef,
-			pvcReferences[i].Name,
+			&groupSnapshot.Status.PVCVolumeSnapshotRefList[i],
 		); err != nil {
 			return err
 		}
@@ -163,54 +132,13 @@ func (se *Reconciler) enrichVolumeGroupSnapshot(
 	return nil
 }
 
-func (se *Reconciler) volumeHandlesToClaimRef(
-	ctx context.Context,
-	volumeHandles []string,
-) ([]corev1.ObjectReference, error) {
-	result := make([]corev1.ObjectReference, 0, len(volumeHandles))
-
-	var volumeList corev1.PersistentVolumeList
-	if err := se.cli.List(ctx, &volumeList); err != nil {
-		return result, err
-	}
-
-	handleMap := make(map[string]corev1.PersistentVolume)
-	for _, volume := range volumeList.Items {
-		if volume.Spec.CSI == nil {
-			continue
-		}
-
-		if len(volume.Spec.CSI.VolumeHandle) == 0 {
-			continue
-		}
-
-		if volume.Spec.ClaimRef == nil {
-			continue
-		}
-
-		handleMap[volume.Spec.CSI.VolumeHandle] = volume
-	}
-
-	for _, handle := range volumeHandles {
-		volume, ok := handleMap[handle]
-		if !ok {
-			return nil, fmt.Errorf("cannot find PVC for volume handle %s", handle)
-		}
-
-		result = append(result, *volume.Spec.ClaimRef)
-	}
-
-	return result, nil
-}
-
 // enrichVolumeSnapshot enriches a Volume Snapshot created by a VolumeGroupSnapshot
 func (se *Reconciler) enrichVolumeGroupSnapshotMember(
 	ctx context.Context,
 	cluster *apiv1.Cluster,
 	backup *apiv1.Backup,
 	groupSnapshot *storagegroupsnapshotv1alpha1.VolumeGroupSnapshot,
-	snapshotRef corev1.ObjectReference,
-	pvcName string,
+	snapshotRef *storagegroupsnapshotv1alpha1.PVCVolumeSnapshotPair,
 ) error {
 	var snapshot storagesnapshotv1.VolumeSnapshot
 	var pvc corev1.PersistentVolumeClaim
@@ -218,8 +146,8 @@ func (se *Reconciler) enrichVolumeGroupSnapshotMember(
 	if err := se.cli.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: snapshotRef.Namespace,
-			Name:      snapshotRef.Name,
+			Namespace: cluster.Namespace,
+			Name:      snapshotRef.VolumeSnapshotRef.Name,
 		},
 		&snapshot,
 	); err != nil {
@@ -233,7 +161,7 @@ func (se *Reconciler) enrichVolumeGroupSnapshotMember(
 		ctx,
 		client.ObjectKey{
 			Namespace: cluster.Namespace,
-			Name:      pvcName,
+			Name:      snapshotRef.PersistentVolumeClaimRef.Name,
 		},
 		&pvc,
 	); err != nil {
