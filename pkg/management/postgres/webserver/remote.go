@@ -91,7 +91,7 @@ func NewRemoteWebServer(
 		ReadHeaderTimeout: DefaultReadHeaderTimeout,
 	}
 
-	return NewWebServer(instance, server), nil
+	return NewWebServer(server), nil
 }
 
 func (ws *remoteWebserverEndpoints) isServerHealthy(w http.ResponseWriter, _ *http.Request) {
